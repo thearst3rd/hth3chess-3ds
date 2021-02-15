@@ -181,7 +181,7 @@ void updateGameState()
 			status = "Error: unknown status";
 	}
 
-	moves = moveListGetUciString(chessGetMoveHistory(c));
+	moves = chessGetMoveHistoryUci(c);
 
 	consoleClear();
 
