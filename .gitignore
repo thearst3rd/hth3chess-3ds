@@ -1,0 +1,6 @@
+build/
+romfs/
+*.o
+*.3dsx
+*.elf
+*.smdh
