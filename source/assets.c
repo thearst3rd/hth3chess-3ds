@@ -1,9 +1,9 @@
 /*
- * Implementation for graphics/sprite handling
+ * Implementation for loading in game assets
  * Created on 2021/02/15 by thearst3rd
  */
 
-#include "gfx.h"
+#include "assets.h"
 #include "sprites.h"
 
 C2D_SpriteSheet spriteSheet;
@@ -34,7 +34,7 @@ void initPieceSet()
 	initSprite(&pieceSet.bP, sprites_bP_idx);
 }
 
-void loadGfx()
+void loadSprites()
 {
 	spriteSheet = C2D_SpriteSheetLoad("romfs:/gfx/sprites.t3x");
 	if (!spriteSheet)
@@ -48,7 +48,7 @@ void loadGfx()
 	C2D_SpriteSetRotation(&checkIndicator, C3D_Angle(0));
 }
 
-void freeGfx()
+void freeSprites()
 {
 	C2D_SpriteSheetFree(spriteSheet);
 }

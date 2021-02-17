@@ -1,5 +1,5 @@
 /*
- * Definitions for graphics/sprite handling
+ * Definitions for loading in game assets
  * Created on 2021/02/15 by thearst3rd
  */
 
@@ -25,5 +25,5 @@ typedef struct
 	C2D_Sprite bP;
 } gfxPieceSet;
 
-void loadGfx();
-void freeGfx();
+void loadSprites();
+void freeSprites();

@@ -3,13 +3,15 @@
  * Created on 2021/02/14 by thearst3rd
  */
 
-#include <assert.h>
-#include <string.h>
+#include "main.h"
+
+//#include <assert.h>
+//#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
-#include "gfx.h"
+#include "assets.h"
 #include "state_ingame.h"
 
 
@@ -115,9 +117,10 @@ int main(int argc, char* argv[])
 	// Create screens
 	bottom = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 
-	loadGfx();
+	// Load assets
+	loadSprites();
 
-	// Init game state
+	// Init app state
 	chessStateInit(STATE_INGAME);
 
 	// Main loop
@@ -150,8 +153,8 @@ int main(int argc, char* argv[])
 	// Deinit game state
 	chessStateDeinit();
 
-	// Delete graphics
-	freeGfx();
+	// Free assets
+	freeSprites();
 
 	// Deinit libs
 	C2D_Fini();

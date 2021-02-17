@@ -9,7 +9,8 @@
 
 #include <chesslib/chess.h>
 
-#include "gfx.h"
+#include "main.h"
+#include "assets.h"
 
 
 #define SQUARE_SIZE 	30

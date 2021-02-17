@@ -5,8 +5,6 @@
 
 #pragma once
 
-#include "main.h"
-
 void stateIngameInit();
 void stateIngameDeinit();
 void stateIngameUpdate();
