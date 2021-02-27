@@ -7,7 +7,7 @@
 
 #include <citro2d.h>
 
-void stateIngameInit();
+void stateIngameInit(void *arg);
 void stateIngameDeinit();
 void stateIngameUpdate();
 void stateIngameDrawTop(gfx3dSide_t side);
