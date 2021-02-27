@@ -5,7 +5,10 @@
 
 #pragma once
 
+#include <citro2d.h>
+
 void stateIngameInit();
 void stateIngameDeinit();
 void stateIngameUpdate();
-void stateIngameDraw();
+void stateIngameDrawTop(gfx3dSide_t side);
+void stateIngameDrawBottom();

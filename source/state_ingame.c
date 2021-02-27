@@ -18,7 +18,6 @@
 #define BOARD_OFFSET_Y 	0
 
 extern int shouldBreakFromMainLoop;
-extern C3D_RenderTarget *bottom;
 
 // Get graphics variables
 extern gfxPieceSet pieceSet;
@@ -219,7 +218,7 @@ void botPlayMove()
 // MAIN CALLBACKS //
 ////////////////////
 
-void stateIngameInit()
+void stateIngameInit(void *arg)
 {
 	initChess();
 }
@@ -325,11 +324,13 @@ void stateIngameUpdate()
 	}
 }
 
-void stateIngameDraw()
+void stateIngameDrawTop(gfx3dSide_t side)
 {
-	C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-	C2D_TargetClear(bottom, cBackground);
-	C2D_SceneBegin(bottom);
+	drawPiece(chessGetPlayer(c) == pcWhite ? pWKing : pBKing, 100, 100, 0);
+}
+
+void stateIngameDrawBottom()
+{
 	for (int rank = 8; rank > 0; rank--)
 	{
 		int rankVisual = isFlipped ? 9 - rank : rank;
@@ -395,5 +396,14 @@ void stateIngameDraw()
 		piece p = chessGetPiece(c, draggingSq);
 		drawPiece(p, touch.px, touch.py, 0);
 	}
-	C3D_FrameEnd(0);
 }
+
+// State struct
+appState stateIngame =
+{
+	stateIngameInit,
+	stateIngameDeinit,
+	stateIngameUpdate,
+	stateIngameDrawTop,
+	stateIngameDrawBottom
+};

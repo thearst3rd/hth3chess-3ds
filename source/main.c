@@ -14,10 +14,13 @@
 #include "assets.h"
 #include "state_ingame.h"
 
+// Game states
+extern appState stateIngame;
 
 // Handle application's main state machine
-appState currentState = STATE_NONE;
-appState nextState = STATE_NONE;
+appState *currentState = &stateIngame;
+appState *nextState = NULL;
+void *nextStateInitArg = NULL;
 
 // Define board colors
 u32 cBackground;
@@ -31,6 +34,7 @@ C2D_ImageTint tintPieceTransparent;
 
 int shouldBreakFromMainLoop = 0;
 
+C3D_RenderTarget *top = NULL;
 C3D_RenderTarget *bottom = NULL;
 
 // Input handling
@@ -39,48 +43,6 @@ u32 kHeld;
 u32 kUp;
 touchPosition touch;
 
-
-//////////////////
-// STATE RUNNER //
-//////////////////
-
-void chessStateInit(appState newState)
-{
-	switch (newState)
-	{
-		case STATE_INGAME: stateIngameInit(); break;
-		default: printf("Invalid State %d", newState); break;
-	}
-	currentState = newState;
-}
-
-void chessStateDeinit()
-{
-	switch (currentState)
-	{
-		case STATE_INGAME: stateIngameDeinit(); break;
-		default: printf("Invalid State %d", currentState); break;
-	}
-	currentState = STATE_NONE;
-}
-
-void chessStateUpdate()
-{
-	switch (currentState)
-	{
-		case STATE_INGAME: stateIngameUpdate(); break;
-		default: printf("Invalid State %d", currentState); break;
-	}
-}
-
-void chessStateDraw()
-{
-	switch (currentState)
-	{
-		case STATE_INGAME: stateIngameDraw(); break;
-		default: printf("Invalid State %d", currentState); break;
-	}
-}
 
 //////////
 // MAIN //
@@ -94,7 +56,6 @@ int main(int argc, char* argv[])
 	C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
 	C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
 	C2D_Prepare();
-	consoleInit(GFX_TOP, NULL);
 
 	srand(time(NULL));
 
@@ -115,13 +76,14 @@ int main(int argc, char* argv[])
 	};
 
 	// Create screens
+	top = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
 	bottom = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 
 	// Load assets
 	loadSprites();
 
 	// Init app state
-	chessStateInit(STATE_INGAME);
+	currentState->init(NULL);
 
 	// Main loop
 	while (aptMainLoop())
@@ -133,25 +95,33 @@ int main(int argc, char* argv[])
 		kUp   = hidKeysUp();
 		hidTouchRead(&touch);
 
-		chessStateUpdate();
+		currentState->update();
 
 		// Render the scene
-		chessStateDraw();
+		C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+		C2D_TargetClear(top, cBackground);
+		C2D_SceneBegin(top);
+		currentState->drawTop(GFX_LEFT); 	// Only left for now
+		C2D_TargetClear(bottom, cBackground);
+		C2D_SceneBegin(bottom);
+		currentState->drawBottom();
+		C3D_FrameEnd(0);
 
 		// Handle exiting/state changes
 		if (shouldBreakFromMainLoop)
 			break;
 
-		if (nextState != STATE_NONE)
+		if (nextState != NULL)
 		{
-			chessStateDeinit();
-			chessStateInit(nextState);
-			nextState = STATE_NONE;
+			currentState->deinit();
+			currentState = nextState;
+			nextState = NULL;
+			currentState->init(nextStateInitArg);
 		}
 	}
 
 	// Deinit game state
-	chessStateDeinit();
+	currentState->deinit();
 
 	// Free assets
 	freeSprites();

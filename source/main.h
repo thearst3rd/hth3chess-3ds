@@ -5,12 +5,17 @@
 
 #pragma once
 
-#define SCREEN_WIDTH 	320
-#define SCREEN_HEIGHT 	240
+#include <citro2d.h>
 
-typedef enum
+#define SCREEN_TOP_WIDTH 		400
+#define SCREEN_BOTTOM_WIDTH 	320
+#define SCREEN_HEIGHT 			240
+
+typedef struct
 {
-	STATE_NONE,
-	STATE_MENU, // TODO - create this
-	STATE_INGAME,
+	void (*init)(void *arg);
+	void (*deinit)();
+	void (*update)();
+	void (*drawTop)(gfx3dSide_t side);
+	void (*drawBottom)();
 } appState;
