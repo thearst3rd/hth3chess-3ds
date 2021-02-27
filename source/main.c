@@ -5,14 +5,17 @@
 
 #include "main.h"
 
-//#include <assert.h>
-//#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
 #include "assets.h"
 #include "state_ingame.h"
+
+// System variables
+CFG_SystemModel model = CFG_MODEL_2DS;
+bool isNew3DS = false;
+bool has3DScreen = false;
 
 // Game states
 extern appState stateIngame;
@@ -22,26 +25,20 @@ appState *currentState = &stateIngame;
 appState *nextState = NULL;
 void *nextStateInitArg = NULL;
 
-// Define board colors
-u32 cBackground;
-u32 cDarkSq;
-u32 cLightSq;
-u32 cHighlightSq;
-u32 cPieceTransparent;
-u32 cLegalMove;
-
-C2D_ImageTint tintPieceTransparent;
-
 int shouldBreakFromMainLoop = 0;
 
-C3D_RenderTarget *top = NULL;
+C3D_RenderTarget *topLeft = NULL;
+C3D_RenderTarget *topRight = NULL;
 C3D_RenderTarget *bottom = NULL;
+
+extern u32 cBackground;
 
 // Input handling
 u32 kDown;
 u32 kHeld;
 u32 kUp;
 touchPosition touch;
+float slider3D = 0;
 
 
 //////////
@@ -57,29 +54,48 @@ int main(int argc, char* argv[])
 	C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
 	C2D_Prepare();
 
+	// Get system configurtion
+	Result rc = cfguInit();
+	if (R_SUCCEEDED(rc))
+	{
+		CFG_SystemModel tModel;
+		bool tIsNew3DS;
+		u8 tIs2DS;
+
+		rc = CFGU_GetSystemModel(&tModel);
+		if (R_SUCCEEDED(rc))
+			model = tModel;
+
+		rc = APT_CheckNew3DS(&tIsNew3DS);
+		if (R_SUCCEEDED(rc))
+			isNew3DS = tIsNew3DS;
+
+		rc = CFGU_GetModelNintendo2DS(&tIs2DS);
+		if (R_SUCCEEDED(rc))
+			has3DScreen = (tIs2DS == 1); 	// 1 means not 2DS...
+
+		//isNew3DS = (model == CFG_MODEL_N2DSXL) || (model == CFG_MODEL_N3DS) || (model == CFG_MODEL_N3DSXL);
+		//has3DScreen = (model == CFG_MODEL_3DS) || (model == CFG_MODEL_3DSXL) || (model == CFG_MODEL_N3DS) || (model == CFG_MODEL_N3DSXL);
+
+		cfguExit();
+	}
+
+	if (isNew3DS)
+		osSetSpeedupEnable(true);
+
 	srand(time(NULL));
 
-	// Define colors
-	cBackground = C2D_Color32(25, 25, 25, 255);
-	cDarkSq = C2D_Color32(167, 129, 177, 255);
-	cLightSq = C2D_Color32(234, 223, 237, 255);
-	cHighlightSq = C2D_Color32(255, 255, 0, 100);
-	cPieceTransparent = C2D_Color32(255, 255, 255, 70);
-	cLegalMove = C2D_Color32(0, 0, 0, 100);
-
-	tintPieceTransparent = (C2D_ImageTint)
-	{
-		(C2D_Tint) { cPieceTransparent, 0.0 },
-		(C2D_Tint) { cPieceTransparent, 0.0 },
-		(C2D_Tint) { cPieceTransparent, 0.0 },
-		(C2D_Tint) { cPieceTransparent, 0.0 }
-	};
-
 	// Create screens
-	top = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+	topLeft = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+	if (has3DScreen)
+	{
+		topRight = C2D_CreateScreenTarget(GFX_TOP, GFX_RIGHT);
+		gfxSet3D(true);
+	}
 	bottom = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 
 	// Load assets
+	initColors();
 	loadSprites();
 
 	// Init app state
@@ -95,13 +111,22 @@ int main(int argc, char* argv[])
 		kUp   = hidKeysUp();
 		hidTouchRead(&touch);
 
+		if (has3DScreen)
+			slider3D = osGet3DSliderState();
+
 		currentState->update();
 
 		// Render the scene
 		C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-		C2D_TargetClear(top, cBackground);
-		C2D_SceneBegin(top);
-		currentState->drawTop(GFX_LEFT); 	// Only left for now
+		C2D_TargetClear(topLeft, cBackground);
+		C2D_SceneBegin(topLeft);
+		currentState->drawTop(GFX_LEFT);
+		if (has3DScreen)
+		{
+			C2D_TargetClear(topRight, cBackground);
+			C2D_SceneBegin(topRight);
+			currentState->drawTop(GFX_RIGHT);
+		}
 		C2D_TargetClear(bottom, cBackground);
 		C2D_SceneBegin(bottom);
 		currentState->drawBottom();

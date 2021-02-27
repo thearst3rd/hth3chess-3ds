@@ -10,6 +10,34 @@ C2D_SpriteSheet spriteSheet;
 gfxPieceSet pieceSet;
 C2D_Sprite checkIndicator;
 
+// Define board colors
+u32 cBackground;
+u32 cDarkSq;
+u32 cLightSq;
+u32 cHighlightSq;
+u32 cPieceTransparent;
+u32 cLegalMove;
+
+C2D_ImageTint tintPieceTransparent;
+
+void initColors()
+{
+	cBackground = C2D_Color32(25, 25, 25, 255);
+	cDarkSq = C2D_Color32(167, 129, 177, 255);
+	cLightSq = C2D_Color32(234, 223, 237, 255);
+	cHighlightSq = C2D_Color32(255, 255, 0, 100);
+	cPieceTransparent = C2D_Color32(255, 255, 255, 70);
+	cLegalMove = C2D_Color32(0, 0, 0, 100);
+
+	tintPieceTransparent = (C2D_ImageTint)
+	{
+		(C2D_Tint) { cPieceTransparent, 0.0 },
+		(C2D_Tint) { cPieceTransparent, 0.0 },
+		(C2D_Tint) { cPieceTransparent, 0.0 },
+		(C2D_Tint) { cPieceTransparent, 0.0 }
+	};
+}
+
 void initSprite(C2D_Sprite *spr, int index)
 {
 	C2D_SpriteFromSheet(spr, spriteSheet, index);

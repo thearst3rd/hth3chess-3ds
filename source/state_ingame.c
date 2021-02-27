@@ -14,7 +14,8 @@
 
 
 #define SQUARE_SIZE 	30
-#define BOARD_OFFSET_X 	40
+#define BOARD_OFFSET_X_TOP 		80
+#define BOARD_OFFSET_X_BOTTOM 	40
 #define BOARD_OFFSET_Y 	0
 
 extern int shouldBreakFromMainLoop;
@@ -37,6 +38,7 @@ extern u32 kDown;
 extern u32 kHeld;
 extern u32 kUp;
 extern touchPosition touch;
+extern float slider3D;
 
 // Define game variables
 chess *c = NULL;
@@ -51,6 +53,8 @@ sq draggingSq = SQ_INVALID;
 sq hoverSq = SQ_INVALID;
 sq highlightSq1 = SQ_INVALID;
 sq highlightSq2 = SQ_INVALID;
+int draggingX = 0;
+int draggingY = 0;
 
 sqSet legalMoves;
 sqSet checkMask;
@@ -182,13 +186,13 @@ void initChess()
 // Given an x, y position on screen, return which board square that is in
 sq posToSquare(int x, int y)
 {
-	if (x < BOARD_OFFSET_X
-			|| x > (BOARD_OFFSET_X + 8 * SQUARE_SIZE)
-			|| y < BOARD_OFFSET_Y
-			|| y > (BOARD_OFFSET_Y + 8 * SQUARE_SIZE))
+	if (x < 0
+			|| x >= (8 * SQUARE_SIZE)
+			|| y < 0
+			|| y >= (8 * SQUARE_SIZE))
 		return SQ_INVALID;
 
-	sq s = sqI(1 + (x - BOARD_OFFSET_X) / SQUARE_SIZE, 8 - (y - BOARD_OFFSET_Y) / SQUARE_SIZE);
+	sq s = sqI(1 + x / SQUARE_SIZE, 8 - y / SQUARE_SIZE);
 	if (isFlipped)
 	{
 		s.file = 9 - s.file;
@@ -211,6 +215,98 @@ void botPlayMove()
 
 	chessPlayMove(c, botGetMove());
 	updateGameStatus();
+}
+
+void drawChessboard(int boardX, int boardY, float depth)
+{
+	int squareXOffset = round(-depth * 2);
+	int squareYOffset = 0;
+	int pieceXOffset = round(depth * 2);
+	int pieceYOffset = 0;
+	int draggingXOffset = round(depth * 4);
+	int draggingYOffset = 0;
+
+	// If depth is negative, draw files in reverse order so pieces don't get covered
+	int fileStart, fileEnd, fileOffset;
+	if (depth < 0)
+	{
+		fileStart = 1;
+		fileEnd = 9;
+		fileOffset = 1;
+	}
+	else
+	{
+		fileStart = 8;
+		fileEnd = 0;
+		fileOffset = -1;
+	}
+
+	for (int rank = 8; rank >= 1; rank--)
+	{
+		int rankVisual = isFlipped ? 9 - rank : rank;
+		int y = (8 - rankVisual) * SQUARE_SIZE + boardY;
+		for (int file = fileStart; file != fileEnd; file += fileOffset)
+		{
+			int fileVisual = isFlipped ? 9 - file : file;
+			int x = (fileVisual - 1) * SQUARE_SIZE + boardX;
+			sq s = sqI(file, rank);
+
+			u32 col = sqIsDark(s) ? cDarkSq : cLightSq;
+			C2D_DrawRectangle(x + squareXOffset, y + squareYOffset, 0, SQUARE_SIZE, SQUARE_SIZE, col, col, col, col);
+
+			if (sqEq(s, highlightSq1) || sqEq(s, highlightSq2))
+				C2D_DrawRectangle(x + squareXOffset, y + squareYOffset, 0, SQUARE_SIZE, SQUARE_SIZE, cHighlightSq,
+						cHighlightSq, cHighlightSq, cHighlightSq);
+
+			if (sqSetGet(&checkMask, s))
+			{
+				C2D_SpriteSetPos(&checkIndicator, x + squareXOffset, y + squareYOffset);
+				C2D_DrawSprite(&checkIndicator);
+			}
+
+			piece p = chessGetPiece(c, s);
+			if (p)
+				drawPiece(p, x + (SQUARE_SIZE / 2) + pieceXOffset, y + (SQUARE_SIZE / 2) + pieceYOffset,
+						sqEq(draggingSq, s));
+		}
+	}
+	if (isDragging)
+	{
+		// According to the 2d shapes example, we should draw all circles AFTER all non-circles. That's the reason
+		// for the second for loop. We do want to draw the dragging piece after, though
+		if (showLegals)
+		{
+			for (int rank = 8; rank > 0; rank--)
+			{
+				int rankVisual = isFlipped ? 9 - rank : rank;
+				int y = (8 - rankVisual) * SQUARE_SIZE + boardY;
+				for (int file = 1; file <= 8; file++)
+				{
+					int fileVisual = isFlipped ? 9 - file : file;
+					int x = (fileVisual - 1) * SQUARE_SIZE + boardX;
+
+					sq s = sqI(file, rank);
+
+					if (sqSetGet(&legalMoves, s))
+					{
+						piece p = chessGetPiece(c, s);
+
+						int radius;
+						if (p == pEmpty)
+							radius = 5;
+						else
+							radius = 12;
+
+						C2D_DrawCircle(x + (SQUARE_SIZE / 2) + draggingXOffset, y + (SQUARE_SIZE / 2)
+								+ draggingYOffset, 0, radius, cLegalMove, cLegalMove, cLegalMove, cLegalMove);
+					}
+				}
+			}
+		}
+
+		piece p = chessGetPiece(c, draggingSq);
+		drawPiece(p, boardX + draggingX + draggingXOffset, boardY + draggingY + draggingYOffset, 0);
+	}
 }
 
 
@@ -275,7 +371,9 @@ void stateIngameUpdate()
 
 	if (kDown & KEY_TOUCH)
 	{
-		draggingSq = posToSquare(touch.px, touch.py);
+		draggingX = touch.px - BOARD_OFFSET_X_BOTTOM;
+		draggingY = touch.py - BOARD_OFFSET_Y;
+		draggingSq = posToSquare(draggingX, draggingY);
 		piece p = chessGetPiece(c, draggingSq);
 		if (!sqEq(draggingSq, SQ_INVALID)
 				&& chessGetTerminalState(c) == tsOngoing
@@ -298,7 +396,11 @@ void stateIngameUpdate()
 	if (kHeld & KEY_TOUCH)
 	{
 		if (isDragging)
-			hoverSq = posToSquare(touch.px, touch.py);
+		{
+			draggingX = touch.px - BOARD_OFFSET_X_BOTTOM;
+			draggingY = touch.py - BOARD_OFFSET_Y;
+			hoverSq = posToSquare(draggingX, draggingY);
+		}
 	}
 
 	if (kUp & KEY_TOUCH)
@@ -326,76 +428,15 @@ void stateIngameUpdate()
 
 void stateIngameDrawTop(gfx3dSide_t side)
 {
-	drawPiece(chessGetPlayer(c) == pcWhite ? pWKing : pBKing, 100, 100, 0);
+	if (side == GFX_LEFT)
+		drawChessboard(BOARD_OFFSET_X_TOP, BOARD_OFFSET_Y, slider3D);
+	else if (side == GFX_RIGHT)
+		drawChessboard(BOARD_OFFSET_X_TOP, BOARD_OFFSET_Y, -slider3D);
 }
 
 void stateIngameDrawBottom()
 {
-	for (int rank = 8; rank > 0; rank--)
-	{
-		int rankVisual = isFlipped ? 9 - rank : rank;
-		int y = (8 - rankVisual) * SQUARE_SIZE + BOARD_OFFSET_Y;
-		for (int file = 1; file <= 8; file++)
-		{
-			int fileVisual = isFlipped ? 9 - file : file;
-			int x = (fileVisual - 1) * SQUARE_SIZE + BOARD_OFFSET_X;
-			sq s = sqI(file, rank);
-
-			u32 col = sqIsDark(s) ? cDarkSq : cLightSq;
-			C2D_DrawRectangle(x, y, 0, SQUARE_SIZE, SQUARE_SIZE, col, col, col, col);
-
-			if (sqEq(s, highlightSq1) || sqEq(s, highlightSq2))
-				C2D_DrawRectangle(x, y, 0, SQUARE_SIZE, SQUARE_SIZE, cHighlightSq, cHighlightSq, cHighlightSq,
-						cHighlightSq);
-
-			if (sqSetGet(&checkMask, s))
-			{
-				C2D_SpriteSetPos(&checkIndicator, x, y);
-				C2D_DrawSprite(&checkIndicator);
-			}
-
-			piece p = chessGetPiece(c, s);
-			if (p)
-				drawPiece(p, x + (SQUARE_SIZE / 2), y + (SQUARE_SIZE / 2), sqEq(draggingSq, s));
-		}
-	}
-	if (isDragging)
-	{
-		// According to the 2d shapes example, we should draw all circles AFTER all non-circles. That's the reason
-		// for the second for loop. We do want to draw the dragging piece after, though
-		if (showLegals)
-		{
-			for (int rank = 8; rank > 0; rank--)
-			{
-				int rankVisual = isFlipped ? 9 - rank : rank;
-				int y = (8 - rankVisual) * SQUARE_SIZE + BOARD_OFFSET_Y;
-				for (int file = 1; file <= 8; file++)
-				{
-					int fileVisual = isFlipped ? 9 - file : file;
-					int x = (fileVisual - 1) * SQUARE_SIZE + BOARD_OFFSET_X;
-
-					sq s = sqI(file, rank);
-
-					if (sqSetGet(&legalMoves, s))
-					{
-						piece p = chessGetPiece(c, s);
-
-						int radius;
-						if (p == pEmpty)
-							radius = 5;
-						else
-							radius = 12;
-
-						C2D_DrawCircle(x + (SQUARE_SIZE / 2), y + (SQUARE_SIZE / 2), 0, radius, cLegalMove,
-								cLegalMove, cLegalMove, cLegalMove);
-					}
-				}
-			}
-		}
-
-		piece p = chessGetPiece(c, draggingSq);
-		drawPiece(p, touch.px, touch.py, 0);
-	}
+	drawChessboard(BOARD_OFFSET_X_BOTTOM, BOARD_OFFSET_Y, 0);
 }
 
 // State struct

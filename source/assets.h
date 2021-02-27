@@ -25,5 +25,6 @@ typedef struct
 	C2D_Sprite bP;
 } gfxPieceSet;
 
+void initColors();
 void loadSprites();
 void freeSprites();
