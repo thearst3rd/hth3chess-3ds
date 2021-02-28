@@ -18,14 +18,15 @@ bool isNew3DS = false;
 bool has3DScreen = false;
 
 // Game states
+extern appState stateMainMenu;
 extern appState stateIngame;
 
 // Handle application's main state machine
-appState *currentState = &stateIngame;
+appState *currentState = &stateMainMenu;
 appState *nextState = NULL;
 void *nextStateInitArg = NULL;
 
-int shouldBreakFromMainLoop = 0;
+bool shouldBreakFromMainLoop = false;
 
 C3D_RenderTarget *topLeft = NULL;
 C3D_RenderTarget *topRight = NULL;

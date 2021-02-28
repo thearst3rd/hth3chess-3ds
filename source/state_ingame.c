@@ -18,7 +18,10 @@
 #define BOARD_OFFSET_X_BOTTOM 	40
 #define BOARD_OFFSET_Y 	0
 
-extern int shouldBreakFromMainLoop;
+// State handling
+extern appState *nextState;
+extern void *nextStateInitArg;
+extern appState stateMainMenu;
 
 // Get graphics variables
 extern gfxPieceSet pieceSet;
@@ -328,7 +331,10 @@ void stateIngameDeinit()
 void stateIngameUpdate()
 {
 	if (kDown & KEY_START)
-		shouldBreakFromMainLoop = 1; // break in order to return to hbmenu
+	{
+		nextState = &stateMainMenu;
+		nextStateInitArg = NULL;
+	}
 
 	if (kDown & KEY_SELECT)
 	{
